@@ -1,44 +1,145 @@
-ui <- fluidPage(
-  titlePanel("Data Analysis"),
-  
-  sidebarLayout(
-    sidebarPanel(
-      fileInput(inputId = "file", label = "Choose CSV File",accept = c("text/plain", ".csv")),
-      actionButton(inputId = "go", label = "Load", icon("download")),
-      hr(),
-      selectInput("dimensionSize", "Select Dimension",c("Unidimentional","Bidimentional","Multidimentional")),
-      uiOutput(outputId = "checkbox", label = "Select Columns")
-      #,submitButton("Apply Changes", icon("redo-alt"))
-    ),
-    
-    mainPanel(
-      tabsetPanel(
-        tabPanel("table", dataTableOutput("table"), style = "font-size: 85%"),
-        tabPanel("Nuage de points", 
-                 fluidRow(
-                   column(8, offset = 1, plotOutput("nuagePoints"))
-                 ),
-                 fluidRow(
-                   column(4, offset = 3, textOutput("correlation"))
+## app.R ##
+library(shinydashboard)
+
+ui <- dashboardPage(
+  dashboardHeader(title = "Data Analysis"),
+  dashboardSidebar(
+    sidebarMenu(
+      menuItem("Data Loader", tabName = "DataLoader", icon = icon("database")),
+      menuItem("Unidimentional", tabName = "Unidimentional", icon = icon("chart-pie")),
+      menuItem("Bidimentional", tabName = "Bidimentional", icon = icon("chart-bar")),
+      menuItem("Multidimentional", tabName = "Multidimentional", icon = icon("project-diagram")),
+      menuItem("Missing Values", tabName = "miss", icon = icon("screwdriver"))
+    )
+  ),
+  dashboardBody(
+    tabItems(
+      
+      # ----------------------------- DATA TAB -------------------------------
+      
+      tabItem(tabName = "DataLoader",
+              fluidRow(
+                column( 9, offset = 3,
+                  box( title = "Data", status = "warning", solidHeader = TRUE, collapsible = TRUE, 
+                       fileInput(inputId = "file", label = "Choose CSV File",accept = c("text/plain", ".csv")),
+                       actionButton(inputId = "go", label = "Load", icon("download"))
+                       # submitButton("Apply Changes", icon("redo-alt"))
                   )
+                )
+              ),
+              fluidRow(
+                column( 11, offset = 1,
+                  box( title = "Table", solidHeader = TRUE, collapsible = TRUE, width = 11,
+                        DTOutput("table"), style = "font-size: 85%"
+                  )
+                )
+              )
+      ),
+      
+      # ----------------------------- 1D TAB -------------------------------
+
+            tabItem(tabName = "Unidimentional",
+              # uiOutput(outputId = "checkbox", label = "Select Columns")
+              fluidRow(
+                column(8, offset = 4,
+                  box( title = "Variable Choice", status = "primary", solidHeader = TRUE, collapsible = TRUE,
+                      uiOutput(outputId = "checkbox1", label = "Select Columns")
+                  )
+                )
+              ),
+              fluidRow(
+                box( title = "Variable Choice", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                  plotOutput(outputId = "effectifsDiag")
+                ),
+                box( title = "Variable Choice", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                     plotOutput(outputId = "effectifsCumDiag")
+                ),
+                box( title = "Variable Choice", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                  plotOutput(outputId = "boiteMoustaches")
+                ),
+                box( title = "Variable Choice", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                  plotOutput("colonnes")
+                ),
+                box( title = "Variable Choice", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                  plotOutput("secteurs")
+                ),
+                box( title = "contents", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                  tableOutput(outputId = "contents")
+                )
+              )
         ),
-        tabPanel("Nuage de points et Histogrammes",plotOutput("nuagePointshist")),
-        tabPanel("Boîtes parallèles", 
-                 fluidRow(
-                   column(6, plotOutput("boxplotBasic")),
-                   column(6, plotOutput("boxplotGgplot"))
-                 )),
-        tabPanel("Diag. Barres (2 var.)", 
-                 fluidRow(
-                   column(6, plotOutput("barplotBi")),
-                   column(6, plotOutput("barplotDodgeBi"))
-                 )
-        )
+      
+      # ----------------------------- 2D TAB -------------------------------
+      
+      tabItem(tabName = "Bidimentional",
+              fluidRow(
+                column(8, offset = 4,
+                  box( title = "Variables Choice", status = "primary", solidHeader = TRUE, collapsible = TRUE,
+                      uiOutput(outputId = "checkbox2", label = "Select Columns")
+                  )
+                )
+              ),
+              fluidRow(
+                box( title = "Nuage de points", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                    fluidRow(
+                      column(8, offset = 1, plotOutput("nuagePoints"))
+                    ),
+                    fluidRow(
+                      column(4, offset = 3, textOutput("correlation"))
+                      )
+                    ),
+                box( title = "Nuage de points et Histogrammes", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                    plotOutput("nuagePointshist")
+                ),
+                box( title = "Diag. Barres", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                     fluidRow(
+                       column(6, plotOutput("barplotBi")),
+                       column(6, plotOutput("barplotDodgeBi"))
+                     )
+                ),
+                box( title = "Missing Values", status = "success", solidHeader = TRUE, collapsible = TRUE, width = 3,
+                     tableOutput("force")
+                )
                 #  fluidRow(
                 #    column(4, offset = 4, textOutput("correlation"))
                 #  )
+              )
       ),
-      style = "font-size: 75%"
+      
+      # ----------------------------- +D TAB -------------------------------
+      
+      tabItem(tabName = "Multidimentional",
+              fluidRow(
+                column(8, offset = 4,
+                       box( title = "Variables Choice", status = "primary", solidHeader = TRUE, collapsible = TRUE,
+                            uiOutput(outputId = "checkbox3", label = "Select Columns")
+                       )
+                ),
+              ),
+              fluidRow(
+                box( title = "Boîtes parallèles", status = "success", solidHeader = TRUE, collapsible = TRUE, width = 12,
+                     fluidRow(
+                       column(6, plotOutput("boxplotBasic")),
+                       column(6, plotOutput("boxplotGgplot"))
+                     )
+                )
+              ),
+              fluidRow(
+                box( title = "caract", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                     tableOutput("caract")
+                )
+              )
+      ),
+      
+      # ----------------------------- MISS TAB -------------------------------
+      
+      tabItem(tabName = "miss",
+              box( title = "Missing Values", status = "success", solidHeader = TRUE, collapsible = TRUE, width = 8,
+                  plotOutput(outputId = "miss")
+              )
+      )
     )
   )
 )
+
+

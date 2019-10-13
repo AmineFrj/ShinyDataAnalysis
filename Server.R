@@ -1,10 +1,66 @@
 server <- function(input, output){
+  
+  # ----------------------------- DATA LOADER -------------------------------
+  
   data <- eventReactive(input$go, {
     inFile <- input$file
     if (is.null(inFile)) return(NULL)
-    read.csv(inFile$datapath)
+    read.csv(inFile$datapath,header = TRUE)
+  })
+
+  # ----------------------------- 1D -------------------------------
+  
+  output$effectifsDiag <- renderPlot({ 
+    plot(table(data()[,input$unid]),  xlab = input$unid, ylab ="Effectifs", 
+         main = paste("Distribution des effectifs pour l'âge",input$unid))
   })
   
+  output$effectifsCumDiag <- renderPlot({ 
+    plot(ecdf(as.numeric(as.character(data()[,input$unid]))), 
+         col ="green4", xlab = input$unid, ylab ="Fréquences cumulées", 
+         main = paste("Fréquences cumulés pour",input$unid))
+  })  
+  
+  output$boiteMoustaches <- renderPlot({
+    # Boîte à moustaches
+    boxplot( data()[,input$unid], col = grey(0.8), 
+             main = input$unid,
+             ylab = input$unid, las = 1)
+    # Affichage complémentaires en Y des différents âges
+    rug(data()[,input$unid], side = 2)
+  })
+
+  effectifs <- reactive({table(data()[,input$unid])})
+  
+  output$colonnes <- renderPlot({
+    barplot(effectifs(), main = input$unid, 
+            ylab="Effectifs", las = 2,
+            names.arg = substr(names(effectifs()), 1, 4))
+    
+  })
+  
+  output$secteurs <- renderPlot({
+    pie(effectifs(), labels = substr(names(effectifs()), 1, 4), 
+        main = input$unid, col=c())
+  })
+  
+  tabStats <- reactive({
+    # Calculer les effectifs et les effectifs cumulés
+    table.tmp <- as.data.frame(table(data()[,input$unid]))
+    table.tmp <- cbind(table.tmp, cumsum(table.tmp[[2]]))
+    # Calculer les fréquences et les fréquences cumulés
+    table.tmp <- cbind(table.tmp, 
+                       table.tmp[[2]]/nrow(data())*100,
+                       table.tmp[[3]]/nrow(data())*100)
+    # Ajouter des noms de colonnes
+    colnames(table.tmp) <- c(input$unid, "Effectifs", "Effectifs Cum.",
+                             "Fréquences", "Fréquences Cum.")
+    # Renvoyer le tableau statistique
+    table.tmp
+  })
+  output$contents <- renderTable({ tabStats() })
+  
+  # -----------------------------  2D -------------------------------
   output$nuagePoints <- renderPlot({
     validate(
       need(sapply(data(), class)[input$bid1] != "factor" && sapply(data(), class)[input$bid2] != "factor"
@@ -21,12 +77,45 @@ server <- function(input, output){
     abline(lm(data()[, y.var]~data()[, x.var]), col="red", lwd = 2)
     options(scipen=0)
   })
-  
+
+  # ----------------------------- 2D -------------------------------
+
   output$correlation <- renderText({
     coeff.tmp <- cov(data()[, input$bid1], data()[, input$bid2])/(sqrt(var(data()[, input$bid1])*var(data()[, input$bid2])))
     paste("Coefficient de corrélation linéaire =", round(coeff.tmp,digits = 2))
   })
 
+  output$force <- renderTable({
+    force.df <- as.data.frame(matrix(NA, nrow = 3, ncol = 1))
+    rownames(force.df) = c("X2", "Phi2", "Cramer")
+    # La table de contingence des profils observés
+    tab = with(data(), table(Sex, Level))
+    # print(table(Sex, Level))
+    # La table de contigence s'il y a indépendence
+    tab.indep = tab
+    n = sum(tab)
+    tab.rowSum = apply(tab, 2, sum)
+    tab.colSum = apply(tab, 1, sum)
+    
+    for(i in c(1:length(tab.colSum))){
+      for(j in c(1:length(tab.rowSum))){
+        tab.indep[i,j] = tab.colSum[i]*tab.rowSum[j]/n
+      }
+    }
+    
+    # Calcul du X²
+    force.df[1,1] = sum((tab-tab.indep)^2/tab.indep)
+    # Calcul du Phi²
+    force.df[2,1] = force.df[1,1]/n
+    # Calcul du Cramer
+    force.df[3,1] = sqrt(force.df[2,1]/(min(nrow(tab), ncol(tab))-1))
+    
+    force.df
+    
+  }, rownames=TRUE, colnames=FALSE)
+  
+  # ----------------------------- 2D -------------------------------
+  
   output$nuagePointshist <- renderPlot({
     validate(
       need(sapply(data(), class)[input$bid1] != "factor" 
@@ -39,20 +128,14 @@ server <- function(input, output){
     scatter.with.hist(V1, V2)
   })
   
-  # Boîtes parallèles
-  # ----
-  output$boxplotBasic <- renderPlot({
-    need(sapply(data(), class)[input$multd] != "factor" 
-         , label = "Only Quantitative variables")
-    
-    # Reshape data()
-    data.stack <- melt(data(), measure.vars = input$multd )
-    # Boxplot basique
-    boxplot(data.stack$value ~ data.stack$variable , col="grey",
-            xlab = "Modalités", ylab = "Mesures")
-  })
-
+  # ----------------------------- BOXPLOT -------------------------------
+  
   output$boxplotGgplot <- renderPlot({
+    if(is.null(input$multd))
+      stop("")
+    for(i in input$multd)
+      if(sapply(data(), class)[i] == "factor")
+        stop("")
     # Reshape data()
     data.stack <- melt(data(), measure.vars = input$multd )
     # Boxplot élaborée
@@ -60,8 +143,11 @@ server <- function(input, output){
           xlab = "Modalités", ylab = "Mesures",
           geom=c("boxplot", "jitter"), fill=data.stack[,1]) +
       theme(legend.title=element_blank())
+    
   })
-
+  
+  # ----------------------------- +D -------------------------------
+  
   output$barplotBi <- renderPlot({
     # Diagramme en barres entre les variables 'Level' et 'Sex'
     ggplot(data(), aes(x = data()[,input$bid1], fill = data()[,input$bid2])) + geom_bar()
@@ -72,6 +158,50 @@ server <- function(input, output){
     ggplot(data(), aes(x = data()[,input$bid1], fill = data()[,input$bid2])) + geom_bar(position = "dodge")
   })
 
+  # Boîtes parallèles
+  # ----
+  output$boxplotBasic <- renderPlot({
+    # need(sapply(data(), class)[input$multd] != "factor" 
+    #      , label = "Only Quantitative variables")
+    # need(!is.null(input$multd) 
+    #      , label = "Please Select one or More Variables")
+    if(is.null(input$multd))
+      stop("Please select variables from the list")
+    for(i in input$multd)
+      if(sapply(data(), class)[i] == "factor")
+        stop("Please select Qnatitative Variables Only")
+    # Reshape data()
+    data.stack <- melt(data(), measure.vars = input$multd )
+    # Boxplot basique
+    boxplot(data.stack$value ~ data.stack$variable , col="grey",
+            xlab = "Modalités", ylab = "Mesures")
+    
+  })
+  
+  output$caract <- renderTable({
+    if(is.null(input$multd))
+      stop("Please select variables from the list")
+    for(i in input$multd)
+      if(sapply(data(), class)[i] == "factor")
+        stop("Please select Qnatitative Variables Only or Refer to Unidimentional")
+    
+    var.names <- input$multd
+    # Initialisation de la table
+    caract.df <- data.frame()
+    # Pour chaque colonne, calcul de min, max, mean et ecart-type
+    for(strCol in var.names){
+      caract.vect <- c(min(data()[, strCol]), max(data()[,strCol]), 
+                       mean(data()[,strCol]), sqrt(var(data()[,strCol])))
+      caract.df <- rbind.data.frame(caract.df, caract.vect)
+    }
+    # Définition des row/colnames
+    rownames(caract.df) <- var.names
+    colnames(caract.df) <- c("Minimum", "Maximum", "Moyenne", "Ecart-type")
+    # Renvoyer la table
+    caract.df
+  }, rownames = TRUE, digits = 0)
+  
+  
   # Calcul et affichage le rapport de corrélation
   # ---
   # output$correlation <- renderText({
@@ -90,22 +220,51 @@ server <- function(input, output){
   #   print(sR2)
   # })
   
+  # ----------------------------- Render Table -------------------------------
   
-  output$table <- renderDataTable({data()})
+  output$table <- renderDT({data()},options = list(scrollX = TRUE))
+ 
+  # ----------------------------- Load Checkboxes-------------------------------
   
-  output$checkbox <- renderUI({
+  output$miss <- renderPlot({
+    missmap(data())
+  })
+  
+  output$checkbox1 <- renderUI({
     choice <- colnames(data())
-    if(input$dimensionSize == 'Unidimentional')
-      choices <- radioButtons(inputId = "unid", label = "Select variable", choices = choice)
-    else 
-      if(input$dimensionSize == 'Bidimentional'){
-        choices <- list(
+    radioButtons(inputId = "unid", label = "Select variable", choices = choice)
+  })
+  
+  output$checkbox2 <- renderUI({
+    choice <- colnames(data())
+        list(
           selectInput(inputId = "bid1", label = "Select first variable", choices = choice),
           selectInput(inputId = "bid2", label = "Select second variable", choices = choice)
         )
-      }
-    else
-      choices <- checkboxGroupInput("multd","Select variable(s)", choices = choice)
-    list(hr(),choices)
   })
+  
+  output$checkbox3 <- renderUI({
+    choice <- colnames(data())
+    checkboxGroupInput("multd","Select variable(s)", choices = choice)
+  })
+  
+  # output$checkbox <- renderUI({
+  #   choice <- colnames(data())
+  #   # a = sapply(data(), class)
+  #   # for(i in 1:length(choice))
+  #   #   choice[i] = paste(choice[i],paste(a[i],")",sep = ""),sep = " (")
+  #   
+  #   if(input$dimensionSize == 'Unidimentional')
+  #     choices <- radioButtons(inputId = "unid", label = "Select variable", choices = choice)
+  #   else 
+  #     if(input$dimensionSize == 'Bidimentional'){
+  #       choices <- list(
+  #         selectInput(inputId = "bid1", label = "Select first variable", choices = choice),
+  #         selectInput(inputId = "bid2", label = "Select second variable", choices = choice)
+  #       )
+  #     }
+  #   else
+  #     choices <- checkboxGroupInput("multd","Select variable(s)", choices = choice)
+  #   list(hr(),choices)
+  # })
 }
