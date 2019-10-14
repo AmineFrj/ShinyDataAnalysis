@@ -148,16 +148,16 @@ ui <- dashboardPage(
       tabItem(tabName = "LR",
               fluidRow(
                 
-                       box( title = "Remove vars", status = "warning", solidHeader = TRUE, collapsible = TRUE, 
+                       box( title = "Remove vars", status = "warning", solidHeader = TRUE, collapsible = TRUE, width = 4,
                             uiOutput(outputId = "checkboxChurn")
                        ),
                 
-                       box( title = "Churn Variable", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                       box( title = "Churn Variable", status = "success", solidHeader = TRUE, collapsible = TRUE, width = 4,
                             uiOutput(outputId = "checkboxChurn1")
                        ),
 
-                box( title = "Inf", status = "primary", solidHeader = TRUE, collapsible = TRUE,
-                     textOutput("infos")
+                box( title = "Informations", status = "primary", solidHeader = TRUE, collapsible = TRUE, width = 4,
+                     textOutput("info2")
                 )
               ),
               fluidRow(

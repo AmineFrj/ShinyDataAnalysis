@@ -1,6 +1,7 @@
 server <- function(input, output){
   
   info3 = reactiveVal("Everything Is Okay")
+  info2 = reactiveVal("Everything Is Okay")
   
   # ----------------------------- DATA LOADER -------------------------------
   
@@ -254,8 +255,16 @@ server <- function(input, output){
   # ----------------------------- Churn prediction -------------------------------
   
   output$churnPred <- renderPrint({
-    m = glm(Exited~., family = binomial(link = "logit"), data = data()[,c(-1,-2,-3)])
-    summary(m)
+    if(input$churnUni == "Exited"){
+      info2("Everything Is Okay")
+      a = input$churnUni
+      print(a)
+      m = glm(data()[,a]~., family = binomial(link = "logit"), data = data()[ , -which(names(data()) %in% input$churnVars)])
+      summary(m)
+    }
+    else
+      info2("Please Select a Binary Variable")
+    
   })
   
   # ----------------------------- Load Checkboxes-------------------------------
@@ -294,6 +303,10 @@ server <- function(input, output){
   
   output$info <- renderText({
     paste(info3())
+  })
+  
+  output$info2 <- renderText({
+    paste(info2())
   })
   
   # output$checkbox <- renderUI({
