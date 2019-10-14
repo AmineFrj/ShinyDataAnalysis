@@ -1,5 +1,7 @@
 server <- function(input, output){
   
+  info3 = reactiveVal("Everything Is Okay")
+  
   # ----------------------------- DATA LOADER -------------------------------
   
   data <- eventReactive(input$go, {
@@ -137,19 +139,24 @@ server <- function(input, output){
   
   output$boxplotGgplot <- renderPlot({
     a = TRUE
-    if(is.null(input$multd))
+    if(is.null(input$multd)){
       a = FALSE
+      info3 ("Please select Variables from the list")
+    }
     for(i in input$multd)
-      if(sapply(data(), class)[i] == "factor")
+      if(sapply(data(), class)[i] == "factor"){
         a = FALSE
+        info3("Only Quantitative Variables are allowed")
+      }
     if(a){
+      info3("Everything is Okay")
       # Reshape data()
       data.stack <- reshape::melt(data(), measure.vars = input$multd )
       # Boxplot élaborée
       ggplot2::qplot(x = data.stack[,1], y = data.stack[,2], 
             xlab = "Modalités", ylab = "Mesures",
             geom=c("boxplot", "jitter"), fill=data.stack[,1]) +
-        theme(legend.title=element_blank())
+      ggplot2::theme(legend.title=ggplot2::element_blank())
     }
   })
   
@@ -173,11 +180,15 @@ server <- function(input, output){
     # need(!is.null(input$multd) 
     #      , label = "Please Select one or More Variables")
     a = TRUE
-    if(is.null(input$multd))
+    if(is.null(input$multd)){
       a = FALSE
+      info3 ("Please select Variables from the list")
+    }
     for(i in input$multd)
-      if(sapply(data(), class)[i] == "factor")
+      if(sapply(data(), class)[i] == "factor"){
         a = FALSE
+        info3("Only Quantitative Variables are allowed")
+      }
     if(a){
       # Reshape data()
       data.stack <- reshape::melt(data(), measure.vars = input$multd )
@@ -188,14 +199,18 @@ server <- function(input, output){
   })
   
   output$caract <- renderTable({
-    a = FALSE
-    if(is.null(input$multd))
+    a = TRUE
+    if(is.null(input$multd)){
+      info3 ("Please select Variables from the list")
       a = FALSE
+    }
     for(i in input$multd)
-      if(sapply(data(), class)[i] == "factor")
-        a = FALSE
-    
+      if(sapply(data(), class)[i] == "factor"){
+        info3("Only Quantitative Variables are allowed")
+        a = FALSE 
+      }
     if(a){
+      info3("Everything is Okay")
       var.names <- input$multd
       # Initialisation de la table
       caract.df <- data.frame()
@@ -235,7 +250,14 @@ server <- function(input, output){
   # ----------------------------- Render Table -------------------------------
   
   output$table <- DT::renderDT({data()},options = list(scrollX = TRUE))
- 
+  
+  # ----------------------------- Churn prediction -------------------------------
+  
+  output$churnPred <- renderPrint({
+    m = glm(Exited~., family = binomial(link = "logit"), data = data()[,c(-1,-2,-3)])
+    summary(m)
+  })
+  
   # ----------------------------- Load Checkboxes-------------------------------
   
   output$miss <- renderPlot({
@@ -258,6 +280,20 @@ server <- function(input, output){
   output$checkbox3 <- renderUI({
     choice <- colnames(data())
     checkboxGroupInput("multd","Select variable(s)", choices = choice)
+  })
+  
+  output$checkboxChurn <- renderUI({
+    choice <- colnames(data())
+    checkboxGroupInput("churnVars","Select variable(s) to ignore", choices = choice)
+  })
+  
+  output$checkboxChurn1 <- renderUI({
+    choice <- colnames(data())
+    radioButtons(inputId = "churnUni", label = "Select Predicted Variable", choices = choice)
+  })
+  
+  output$info <- renderText({
+    paste(info3())
   })
   
   # output$checkbox <- renderUI({

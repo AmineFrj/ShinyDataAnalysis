@@ -9,7 +9,8 @@ ui <- dashboardPage(
       menuItem("Unidimentional", tabName = "Unidimentional", icon = icon("chart-pie")),
       menuItem("Bidimentional", tabName = "Bidimentional", icon = icon("chart-bar")),
       menuItem("Multidimentional", tabName = "Multidimentional", icon = icon("project-diagram")),
-      menuItem("Missing Values", tabName = "miss", icon = icon("screwdriver"))
+      menuItem("Missing Values", tabName = "miss", icon = icon("screwdriver")),
+      menuItem("Logistic Regression", tabName = "LR", icon = icon("chart-line"))
     )
   ),
   dashboardBody(
@@ -97,9 +98,11 @@ ui <- dashboardPage(
                        column(6, plotOutput("barplotDodgeBi"))
                      )
                 ),
-                box( title = "Missing Values", status = "success", solidHeader = TRUE, collapsible = TRUE, width = 3,
-                     tableOutput("force")
-                )
+                # box( title = "Missing Values", status = "success", solidHeader = TRUE, collapsible = TRUE, width = 3,
+                #      tableOutput("force")
+                # )
+                
+                
                 #  fluidRow(
                 #    column(4, offset = 4, textOutput("correlation"))
                 #  )
@@ -110,9 +113,12 @@ ui <- dashboardPage(
       
       tabItem(tabName = "Multidimentional",
               fluidRow(
-                column(8, offset = 4,
+                column(8, offset = 2,
                        box( title = "Variables Choice", status = "primary", solidHeader = TRUE, collapsible = TRUE,
                             uiOutput(outputId = "checkbox3", label = "Select Columns")
+                       ),
+                       box( title = "Info", status = "primary", solidHeader = TRUE, collapsible = TRUE,
+                         textOutput("info")
                        )
                 ),
               ),
@@ -136,6 +142,28 @@ ui <- dashboardPage(
       tabItem(tabName = "miss",
               box( title = "Missing Values", status = "success", solidHeader = TRUE, collapsible = TRUE, width = 8,
                   plotOutput(outputId = "miss")
+              )
+      ),
+      
+      tabItem(tabName = "LR",
+              fluidRow(
+                
+                       box( title = "Remove vars", status = "warning", solidHeader = TRUE, collapsible = TRUE, 
+                            uiOutput(outputId = "checkboxChurn")
+                       ),
+                
+                       box( title = "Churn Variable", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                            uiOutput(outputId = "checkboxChurn1")
+                       ),
+
+                box( title = "Inf", status = "primary", solidHeader = TRUE, collapsible = TRUE,
+                     textOutput("infos")
+                )
+              ),
+              fluidRow(
+                box( title = "Churn Prediction", status = "primary", solidHeader = TRUE, collapsible = TRUE, width = 7,
+                     verbatimTextOutput(outputId = "churnPred")
+                )
               )
       )
     )
