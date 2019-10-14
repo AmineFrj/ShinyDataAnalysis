@@ -20,7 +20,7 @@ ui <- dashboardPage(
       tabItem(tabName = "DataLoader",
               fluidRow(
                 column( 9, offset = 3,
-                  box( title = "Data", status = "warning", solidHeader = TRUE, collapsible = TRUE, 
+                  box( title = "Data", status = "primary", solidHeader = TRUE, collapsible = TRUE, 
                        fileInput(inputId = "file", label = "Choose CSV File",accept = c("text/plain", ".csv")),
                        actionButton(inputId = "go", label = "Load", icon("download"))
                        # submitButton("Apply Changes", icon("redo-alt"))
@@ -30,7 +30,7 @@ ui <- dashboardPage(
               fluidRow(
                 column( 11, offset = 1,
                   box( title = "Table", solidHeader = TRUE, collapsible = TRUE, width = 11,
-                        DTOutput("table"), style = "font-size: 85%"
+                       DT::dataTableOutput("table"), style = "font-size: 85%"
                   )
                 )
               )
@@ -48,22 +48,22 @@ ui <- dashboardPage(
                 )
               ),
               fluidRow(
-                box( title = "Variable Choice", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                box( title = "Bar Plot", status = "success", solidHeader = TRUE, collapsible = TRUE,
                   plotOutput(outputId = "effectifsDiag")
                 ),
-                box( title = "Variable Choice", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                box( title = "Cumulative Diagram", status = "success", solidHeader = TRUE, collapsible = TRUE,
                      plotOutput(outputId = "effectifsCumDiag")
                 ),
-                box( title = "Variable Choice", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                box( title = "Box Plot", status = "success", solidHeader = TRUE, collapsible = TRUE,
                   plotOutput(outputId = "boiteMoustaches")
                 ),
-                box( title = "Variable Choice", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                box( title = "Effectives Diagram", status = "success", solidHeader = TRUE, collapsible = TRUE,
                   plotOutput("colonnes")
                 ),
-                box( title = "Variable Choice", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                box( title = "Pie", status = "success", solidHeader = TRUE, collapsible = TRUE,
                   plotOutput("secteurs")
                 ),
-                box( title = "contents", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                box( title = "Contents", status = "success", solidHeader = TRUE, collapsible = TRUE,
                   tableOutput(outputId = "contents")
                 )
               )
@@ -80,18 +80,18 @@ ui <- dashboardPage(
                 )
               ),
               fluidRow(
-                box( title = "Nuage de points", status = "success", solidHeader = TRUE, collapsible = TRUE,
-                    fluidRow(
-                      column(8, offset = 1, plotOutput("nuagePoints"))
-                    ),
-                    fluidRow(
-                      column(4, offset = 3, textOutput("correlation"))
-                      )
-                    ),
-                box( title = "Nuage de points et Histogrammes", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                # box( title = "Nuage de points", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                #     fluidRow(
+                #       column(8, offset = 1, plotOutput("nuagePoints"))
+                #     ),
+                #     fluidRow(
+                #       column(4, offset = 3, textOutput("correlation"))
+                #       )
+                #     ),
+                box( title = "Nuage de points et Histogrammes", status = "success", solidHeader = TRUE, collapsible = TRUE, width = 9,
                     plotOutput("nuagePointshist")
                 ),
-                box( title = "Diag. Barres", status = "success", solidHeader = TRUE, collapsible = TRUE,
+                box( title = "Diag. Barres", status = "success", solidHeader = TRUE, collapsible = TRUE, width = 9,
                      fluidRow(
                        column(6, plotOutput("barplotBi")),
                        column(6, plotOutput("barplotDodgeBi"))

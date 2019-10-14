@@ -10,38 +10,40 @@ server <- function(input, output){
 
   # ----------------------------- 1D -------------------------------
   
-  output$effectifsDiag <- renderPlot({ 
-    plot(table(data()[,input$unid]),  xlab = input$unid, ylab ="Effectifs", 
-         main = paste("Distribution des effectifs pour l'âge",input$unid))
-  })
-  
-  output$effectifsCumDiag <- renderPlot({ 
-    plot(ecdf(as.numeric(as.character(data()[,input$unid]))), 
-         col ="green4", xlab = input$unid, ylab ="Fréquences cumulées", 
-         main = paste("Fréquences cumulés pour",input$unid))
-  })  
-  
-  output$boiteMoustaches <- renderPlot({
-    # Boîte à moustaches
-    boxplot( data()[,input$unid], col = grey(0.8), 
-             main = input$unid,
-             ylab = input$unid, las = 1)
-    # Affichage complémentaires en Y des différents âges
-    rug(data()[,input$unid], side = 2)
-  })
-
-  effectifs <- reactive({table(data()[,input$unid])})
-  
   output$colonnes <- renderPlot({
     barplot(effectifs(), main = input$unid, 
             ylab="Effectifs", las = 2,
             names.arg = substr(names(effectifs()), 1, 4))
-    
   })
   
+  output$effectifsCumDiag <- renderPlot({
+    if(sapply(data(), class)[input$unid] != "factor"){
+      plot(ecdf(as.numeric(as.character(data()[,input$unid]))), 
+           col ="green4", xlab = input$unid, ylab ="Fréquences cumulées", 
+           main = paste("Fréquences cumulés pour",input$unid))
+    }
+  })  
+  
+  output$boiteMoustaches <- renderPlot({
+    if(sapply(data(), class)[input$unid] != "factor"){
+      boxplot( data()[,input$unid], col = grey(0.8), 
+               main = input$unid,
+               ylab = input$unid, las = 1)
+      # Affichage complémentaires en Y des différents âges
+      rug(data()[,input$unid], side = 2)
+    }
+  })
+  
+  output$effectifsDiag <- renderPlot({ 
+    plot(table(data()[,input$unid]),  xlab = input$unid, ylab ="Effectifs", 
+         main = paste("Distribution des effectifs pour l'âge",input$unid))
+  })
+
+  effectifs <- reactive({table(data()[,input$unid])})
+  
   output$secteurs <- renderPlot({
-    pie(effectifs(), labels = substr(names(effectifs()), 1, 4), 
-        main = input$unid, col=c())
+      pie(effectifs(), labels = substr(names(effectifs()), 1, 4), 
+          main = input$unid, col=c())
   })
   
   tabStats <- reactive({
@@ -61,29 +63,33 @@ server <- function(input, output){
   output$contents <- renderTable({ tabStats() })
   
   # -----------------------------  2D -------------------------------
-  output$nuagePoints <- renderPlot({
-    validate(
-      need(sapply(data(), class)[input$bid1] != "factor" && sapply(data(), class)[input$bid2] != "factor"
-           , label = "Only Quantitative variables")
-    )
-    options(scipen=999)
-    x.var = input$bid1; y.var = input$bid2;
-    plot(x = data()[, x.var], y = data()[, y.var], col = "blue",
-         las = 2, cex.axis = 0.7,
-         main = paste(y.var, "en fonction de", x.var),
-         xlab = x.var, ylab = y.var, cex.lab = 1.2
-    )
-    # Droite de régression linéaire (y~x) 
-    abline(lm(data()[, y.var]~data()[, x.var]), col="red", lwd = 2)
-    options(scipen=0)
-  })
-
-  # ----------------------------- 2D -------------------------------
+  
+  # output$nuagePoints <- renderPlot({
+  #   validate(
+  #     need((sapply(data(), class)[input$bid1] != "factor" && sapply(data(), class)[input$bid2] != "factor")
+  #          , label = "Only Quantitative variables")
+  #   )
+  #   
+  #   options(scipen=999)
+  #   x.var = input$bid1; y.var = input$bid2;
+  #   plot(x = data()[, x.var], y = data()[, y.var], col = "blue",
+  #        las = 2, cex.axis = 0.7,
+  #        main = paste(y.var, "en fonction de", x.var),
+  #        xlab = x.var, ylab = y.var, cex.lab = 1.2
+  #   )
+  #   # Droite de régression linéaire (y~x) 
+  #   abline(lm(data()[, y.var]~data()[, x.var]), col="red", lwd = 2)
+  #   options(scipen=0)
+  # })
 
   output$correlation <- renderText({
-    coeff.tmp <- cov(data()[, input$bid1], data()[, input$bid2])/(sqrt(var(data()[, input$bid1])*var(data()[, input$bid2])))
-    paste("Coefficient de corrélation linéaire =", round(coeff.tmp,digits = 2))
+    if(sapply(data(), class)[input$bid1] != "factor" && sapply(data(), class)[input$bid2] != "factor"){
+      coeff.tmp <- cov(data()[, input$bid1], data()[, input$bid2])/(sqrt(var(data()[, input$bid1])*var(data()[, input$bid2])))
+      paste("Coefficient de corrélation linéaire =", round(coeff.tmp,digits = 2))
+    }
   })
+  
+  # ----------------------------- 2D -------------------------------
 
   output$force <- renderTable({
     force.df <- as.data.frame(matrix(NA, nrow = 3, ncol = 1))
@@ -123,39 +129,40 @@ server <- function(input, output){
            , label = "Only Quantitative variables")
     )
     options(digits=1)
-    V1 = data()[, input$bid1] 
-    V2 = data()[, input$bid2]
-    scatter.with.hist(V1, V2)
+    
+    psych::scatter.hist(data()[, input$bid1], data()[, input$bid2])
   })
   
   # ----------------------------- BOXPLOT -------------------------------
   
   output$boxplotGgplot <- renderPlot({
+    a = TRUE
     if(is.null(input$multd))
-      stop("")
+      a = FALSE
     for(i in input$multd)
       if(sapply(data(), class)[i] == "factor")
-        stop("")
-    # Reshape data()
-    data.stack <- melt(data(), measure.vars = input$multd )
-    # Boxplot élaborée
-    qplot(x = data.stack[,1], y = data.stack[,2], 
-          xlab = "Modalités", ylab = "Mesures",
-          geom=c("boxplot", "jitter"), fill=data.stack[,1]) +
-      theme(legend.title=element_blank())
-    
+        a = FALSE
+    if(a){
+      # Reshape data()
+      data.stack <- reshape::melt(data(), measure.vars = input$multd )
+      # Boxplot élaborée
+      ggplot2::qplot(x = data.stack[,1], y = data.stack[,2], 
+            xlab = "Modalités", ylab = "Mesures",
+            geom=c("boxplot", "jitter"), fill=data.stack[,1]) +
+        theme(legend.title=element_blank())
+    }
   })
   
   # ----------------------------- +D -------------------------------
   
   output$barplotBi <- renderPlot({
     # Diagramme en barres entre les variables 'Level' et 'Sex'
-    ggplot(data(), aes(x = data()[,input$bid1], fill = data()[,input$bid2])) + geom_bar()
+    ggplot2::ggplot(data(), ggplot2::aes(x = data()[,input$bid1], fill = data()[,input$bid2])) + ggplot2::geom_bar()
   })
 
   output$barplotDodgeBi <- renderPlot({
     # Diagramme de profils entre les variables 'Level' et 'Sex'
-    ggplot(data(), aes(x = data()[,input$bid1], fill = data()[,input$bid2])) + geom_bar(position = "dodge")
+    ggplot2::ggplot(data(), ggplot2::aes(x = data()[,input$bid1], fill = data()[,input$bid2])) + ggplot2::geom_bar(position = "dodge")
   })
 
   # Boîtes parallèles
@@ -165,40 +172,45 @@ server <- function(input, output){
     #      , label = "Only Quantitative variables")
     # need(!is.null(input$multd) 
     #      , label = "Please Select one or More Variables")
+    a = TRUE
     if(is.null(input$multd))
-      stop("Please select variables from the list")
+      a = FALSE
     for(i in input$multd)
       if(sapply(data(), class)[i] == "factor")
-        stop("Please select Qnatitative Variables Only")
-    # Reshape data()
-    data.stack <- melt(data(), measure.vars = input$multd )
-    # Boxplot basique
-    boxplot(data.stack$value ~ data.stack$variable , col="grey",
-            xlab = "Modalités", ylab = "Mesures")
-    
+        a = FALSE
+    if(a){
+      # Reshape data()
+      data.stack <- reshape::melt(data(), measure.vars = input$multd )
+      # Boxplot basique
+      boxplot(data.stack$value ~ data.stack$variable , col="grey",
+              xlab = "Modalités", ylab = "Mesures")
+    }
   })
   
   output$caract <- renderTable({
+    a = FALSE
     if(is.null(input$multd))
-      stop("Please select variables from the list")
+      a = FALSE
     for(i in input$multd)
       if(sapply(data(), class)[i] == "factor")
-        stop("Please select Qnatitative Variables Only or Refer to Unidimentional")
+        a = FALSE
     
-    var.names <- input$multd
-    # Initialisation de la table
-    caract.df <- data.frame()
-    # Pour chaque colonne, calcul de min, max, mean et ecart-type
-    for(strCol in var.names){
-      caract.vect <- c(min(data()[, strCol]), max(data()[,strCol]), 
-                       mean(data()[,strCol]), sqrt(var(data()[,strCol])))
-      caract.df <- rbind.data.frame(caract.df, caract.vect)
+    if(a){
+      var.names <- input$multd
+      # Initialisation de la table
+      caract.df <- data.frame()
+      # Pour chaque colonne, calcul de min, max, mean et ecart-type
+      for(strCol in var.names){
+        caract.vect <- c(min(data()[, strCol]), max(data()[,strCol]), 
+                         mean(data()[,strCol]), sqrt(var(data()[,strCol])))
+        caract.df <- rbind.data.frame(caract.df, caract.vect)
+      }
+      # Définition des row/colnames
+      rownames(caract.df) <- var.names
+      colnames(caract.df) <- c("Minimum", "Maximum", "Moyenne", "Ecart-type")
+      # Renvoyer la table
+      caract.df
     }
-    # Définition des row/colnames
-    rownames(caract.df) <- var.names
-    colnames(caract.df) <- c("Minimum", "Maximum", "Moyenne", "Ecart-type")
-    # Renvoyer la table
-    caract.df
   }, rownames = TRUE, digits = 0)
   
   
@@ -222,12 +234,12 @@ server <- function(input, output){
   
   # ----------------------------- Render Table -------------------------------
   
-  output$table <- renderDT({data()},options = list(scrollX = TRUE))
+  output$table <- DT::renderDT({data()},options = list(scrollX = TRUE))
  
   # ----------------------------- Load Checkboxes-------------------------------
   
   output$miss <- renderPlot({
-    missmap(data())
+    Amelia::missmap(data())
   })
   
   output$checkbox1 <- renderUI({

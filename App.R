@@ -4,7 +4,7 @@ library(UsingR)
 library(DT)
 library(reshape)
 library(Amelia)
-
+library(psych)
 
 source('UI.R', local = TRUE)
 source('Server.R')
